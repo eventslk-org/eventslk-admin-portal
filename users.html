@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users | Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-logo">EventAdmin</div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link">Dashboard</a></li>
+                <li class="nav-item"><a href="events.html" class="nav-link">Events</a></li>
+                <li class="nav-item"><a href="users.html" class="nav-link active">Users</a></li>
+            </ul>
+            <button onclick="api.logout()" class="btn btn-danger" style="width: 100%; margin-top: auto;">Logout</button>
+        </aside>
+
+        <main class="main-content animate-fade-in">
+            <header class="flex justify-between items-center mb-4">
+                <h1>Manage Users</h1>
+            </header>
+
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <div class="table-container">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rendered rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="env-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!api.isAuthenticated()) window.location.href = 'login.html';
+
+        async function loadUsers() {
+            try {
+                const res = await api.getUsers();
+                const users = res.userList || [];
+                renderUsers(users);
+            } catch (err) {
+                alert("Failed to load users: " + err.message);
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.querySelector('#usersTable tbody');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No users found</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const roleBadge = user.role === 'ADMIN' 
+                    ? `<span style="color: var(--primary-color); font-weight: 600;">${user.role}</span>` 
+                    : user.role;
+                    
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.userId || '-'}</td>
+                    <td>${user.username || '-'}</td>
+                    <td>${user.email || '-'}</td>
+                    <td>${roleBadge}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="deleteUser(${user.userId})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteUser(id) {
+            if (!id) return;
+            if (confirm("Are you sure you want to delete this user? This will also remove their bookings.")) {
+                try {
+                    await api.deleteUser(id);
+                    loadUsers();
+                } catch(err) {
+                    alert("Failed to delete user: " + err.message);
+                }
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>

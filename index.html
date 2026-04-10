@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">EventAdmin</div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link active">Dashboard</a></li>
+                <li class="nav-item"><a href="events.html" class="nav-link">Events</a></li>
+                <li class="nav-item"><a href="users.html" class="nav-link">Users</a></li>
+            </ul>
+            <button onclick="api.logout()" class="btn btn-danger" style="width: 100%; margin-top: auto;">Logout</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content animate-fade-in">
+            <header class="flex justify-between items-center mb-4">
+                <h1>Overview</h1>
+                <div id="adminName" class="text-muted">Welcome, Admin</div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="glass-panel stat-card">
+                    <div class="text-muted">Total Events</div>
+                    <div class="stat-value" id="totalEvents">-</div>
+                </div>
+                <div class="glass-panel stat-card">
+                    <div class="text-muted">Total Users</div>
+                    <div class="stat-value" id="totalUsers">-</div>
+                </div>
+            </div>
+            
+            <div class="glass-panel" style="padding: 1.5rem;">
+                <h2>Recent System Activity</h2>
+                <p class="text-muted">System is running efficiently. Manage your application from the left navigation pane.</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="env-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // Guard script
+        if (!api.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('adminName').textContent = `Welcome, ${api.user.email}`;
+
+        async function loadDashboardStats() {
+            try {
+                // Fetch events
+                const eventsRes = await api.getEvents();
+                const totalEvents = eventsRes.eventList ? eventsRes.eventList.length : 0;
+                document.getElementById('totalEvents').textContent = totalEvents;
+
+                // Fetch users
+                const usersRes = await api.getUsers();
+                const totalUsers = usersRes.userList ? usersRes.userList.length : 0;
+                document.getElementById('totalUsers').textContent = totalUsers;
+
+            } catch (err) {
+                console.error("Failed to load stats", err);
+            }
+        }
+
+        loadDashboardStats();
+    </script>
+</body>
+</html>

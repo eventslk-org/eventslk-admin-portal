@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Event Registration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.15) 0%, transparent 40%),
+                        var(--bg-color);
+        }
+        
+        .login-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 2.5rem;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .error-msg {
+            color: var(--danger-color);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="glass-panel login-box animate-fade-in">
+            <div class="login-header">
+                <h1>Admin Panel</h1>
+                <p class="text-muted">Sign in to manage events</p>
+            </div>
+            
+            <form id="loginForm">
+                <div id="errorMsg" class="error-msg"></div>
+                
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="admin@example.com">
+                </div>
+                
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="env-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // If already logged in, redirect to index
+        if (api.isAuthenticated()) {
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = e.target.querySelector('button');
+            
+            errorMsg.style.display = 'none';
+            btn.textContent = 'Signing in...';
+            btn.disabled = true;
+
+            try {
+                await api.login(email, password);
+                // Success, redirect to dashboard
+                window.location.href = 'index.html';
+            } catch (err) {
+                errorMsg.textContent = err.message || 'Invalid credentials';
+                errorMsg.style.display = 'block';
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
