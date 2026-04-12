@@ -34,10 +34,15 @@ jobs:
 
           # Clone using x-access-token so the remote URL already carries write permissions,
           # which covers both the clone and the subsequent git push without extra configuration
+          # git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eventslk-org/eventslk-k8s-manifests.git
+          # cd eventslk-k8s-manifests
+
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eventslk-org/eventslk-k8s-manifests.git
           cd eventslk-k8s-manifests
 
           # Update the admin portal deployment image tag to the current commit SHA
+          # sed -i "s|image: kaveengayanga12/eventslk-admin-portal:.*|image: kaveengayanga12/eventslk-admin-portal:${{ github.sha }}|" admin-portal-deployment.yaml
+
           sed -i "s|image: kaveengayanga12/eventslk-admin-portal:.*|image: kaveengayanga12/eventslk-admin-portal:${{ github.sha }}|" admin-portal-deployment.yaml
 
           git config user.name "GitHub Actions"
@@ -49,4 +54,4 @@ jobs:
           # when multiple service workflows update the manifest repo simultaneously
           git pull --rebase origin main
 
-          git push origin main
+          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eventslk-org/eventslk-k8s-manifests.git main
