@@ -1,4 +1,4 @@
-name: Build and Push Backend Image
+name: Build and Push Admin Portal
 
 on:
   push:
@@ -19,22 +19,34 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          # Building image for admin portal
+          # Build and push the SHA-tagged image for traceability
           docker build -t kaveengayanga12/eventslk-admin-portal:${{ github.sha }} .
           docker push kaveengayanga12/eventslk-admin-portal:${{ github.sha }}
 
-          # Also tag as 'latest' and push
+          # Also tag as 'latest' so the cluster can pull without knowing the SHA
           docker tag kaveengayanga12/eventslk-admin-portal:${{ github.sha }} kaveengayanga12/eventslk-admin-portal:latest
           docker push kaveengayanga12/eventslk-admin-portal:latest
 
       - name: Update K8s Manifests
         run: |
+          # Remove any leftover directory from a previous failed run to avoid clone conflicts
+          rm -rf eventslk-k8s-manifests
+
+          # Clone using x-access-token so the remote URL already carries write permissions,
+          # which covers both the clone and the subsequent git push without extra configuration
           git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eventslk-org/eventslk-k8s-manifests.git
           cd eventslk-k8s-manifests
-          # Updating the admin portal deployment file
+
+          # Update the admin portal deployment image tag to the current commit SHA
           sed -i "s|image: kaveengayanga12/eventslk-admin-portal:.*|image: kaveengayanga12/eventslk-admin-portal:${{ github.sha }}|" admin-portal-deployment.yaml
+
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add .
           git commit -m "Update admin portal image to ${{ github.sha }}"
+
+          # Rebase against remote main before pushing to prevent 403/conflict errors
+          # when multiple service workflows update the manifest repo simultaneously
+          git pull --rebase origin main
+
           git push origin main
