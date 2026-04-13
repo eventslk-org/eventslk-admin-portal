@@ -1,6 +1,4 @@
-const API_BASE_URL = (window._env_ && window._env_.API_BASE_URL)
-  ? window._env_.API_BASE_URL
-  : 'http://localhost:8080';
+const API_BASE_URL = '/api';
 
 class ApiService {
   constructor() {
