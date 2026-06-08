@@ -58,6 +58,10 @@
                     <div class="text-muted">Total Users</div>
                     <div class="stat-value" id="totalUsers">-</div>
                 </div>
+                <div class="glass-panel stat-card">
+                    <div class="text-muted">Available Seats</div>
+                    <div class="stat-value" id="availableSeats">-</div>
+                </div>
             </div>
             
             <div class="glass-panel" style="padding: 1.5rem;">
@@ -81,8 +85,15 @@
             try {
                 // Fetch events
                 const eventsRes = await api.getEvents();
-                const totalEvents = eventsRes.eventList ? eventsRes.eventList.length : 0;
-                document.getElementById('totalEvents').textContent = totalEvents;
+                const eventList = eventsRes.eventList || [];
+                document.getElementById('totalEvents').textContent = eventList.length;
+
+                // Sum of currently available seats across all events
+                const seats = eventList.reduce((sum, ev) => {
+                    const avail = (ev.availableSeats ?? ev.totalSeats ?? 0);
+                    return sum + Number(avail);
+                }, 0);
+                document.getElementById('availableSeats').textContent = seats;
 
                 // Fetch users
                 const usersRes = await api.getUsers();
