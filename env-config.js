@@ -6,6 +6,7 @@
 // API_BASE_URL environment variable.
 //
 // Loaded before js/api.js, it exposes the gateway base URL as window.ENV.API_BASE_URL.
+// Default targets the local Kong gateway (docker: eventslk-kong-apigw, port 8000).
 window.ENV = {
-  API_BASE_URL: "http://localhost:30080"
+  API_BASE_URL: "http://localhost:8000"
 };

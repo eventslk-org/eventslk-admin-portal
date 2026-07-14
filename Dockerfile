@@ -18,6 +18,6 @@ COPY docker-entrypoint.sh /docker-entrypoint.d/40-render-env-config.sh
 RUN chmod +x /docker-entrypoint.d/40-render-env-config.sh
 
 # Default gateway URL; override with -e API_BASE_URL=... or the k8s deployment env.
-ENV API_BASE_URL=http://localhost:30080
+ENV API_BASE_URL=http://localhost:8000
 
 CMD ["nginx", "-g", "daemon off;"]

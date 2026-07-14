@@ -17,25 +17,30 @@ deployed as a container on Kubernetes.
 
 ## Architecture
 
-All traffic goes to the **API Gateway** (the only externally reachable entry point); the
-gateway routes to `event-registration-api`. The portal calls the gateway directly using the
-public `/api/v1` prefix — no nginx API proxy.
+All traffic goes to the **Kong API gateway** (the only externally reachable entry point);
+Kong proxies the backend paths unchanged (`strip_path: false`), so the portal calls the
+real backend paths directly — no `/api/v1` prefix, no nginx API proxy.
 
 ```
-Admin Browser ──HTTPS──▶ API Gateway (NodePort 30080)  ──▶ event-registration-api (ClusterIP)
-   (env-config.js → window.ENV.API_BASE_URL)        /api/v1/{auth,events,users,book}
+Admin Browser ──HTTPS──▶ Kong gateway (proxy :8000)  ──▶ event-registration-api
+   (env-config.js → window.ENV.API_BASE_URL)              /{auth,event,user,book}
 Admin Browser ──PUT───▶ S3 (presigned URL, event images, no auth header)
 ```
 
-| Frontend call | Gateway → service |
+| Frontend call | Backend |
 |---|---|
-| `POST /api/v1/auth/login` | `/auth/login` |
-| `GET\|POST\|PUT /api/v1/events`, `DELETE /api/v1/events/{id}` | `/event...` |
-| `GET /api/v1/events/upload-url?filename=` | `/event/upload-url` (presigned S3) |
-| `GET /api/v1/users`, `DELETE /api/v1/users/{id}` | `/user...` |
+| `POST /auth/login` | `/auth/login` |
+| `GET\|POST\|PUT /event`, `DELETE /event/{id}` | ADMIN role |
+| `GET /event/upload-url?filename=&contentType=` | presigned S3 PUT (ADMIN) |
+| `GET /user`, `DELETE /user/{id}` | ADMIN role |
 
-> The shipped gateway only defines `auth` and `events` routes. Add the `users` (and `book`)
-> routes from `../FRONTEND_INTEGRATION_SPEC.md` §2 or the Users page returns 404.
+### Image upload contract (presigned S3)
+
+The presigned PUT signature pins **both** headers, so the browser PUT must send exactly:
+`Content-Type: <the declared image type>` and
+`Cache-Control: public, max-age=31536000, immutable`.
+Allowed types: JPEG, PNG, WebP, AVIF, GIF. When the backend has no S3 bucket configured
+(mock mode) the PUT is skipped and a placeholder image URL is stored instead.
 
 ## Pages
 
@@ -52,19 +57,19 @@ Static pages can't read process env, so the gateway URL is injected at container
 
 | File | Role |
 |---|---|
-| `.env` | Source value: `API_BASE_URL=http://localhost:30080` |
+| `.env` | Source value: `API_BASE_URL=http://localhost:8000` |
 | `env-config.template.js` | `window.ENV = { API_BASE_URL: "${API_BASE_URL}" }` |
 | `env-config.js` | Committed default (used when serving statically) |
 | `docker-entrypoint.sh` | Renders `env-config.js` from the template via `envsubst` on boot |
 
-`js/api.js` reads `window.ENV.API_BASE_URL` and calls `${API_BASE_URL}/api/v1/...`.
+`js/api.js` reads `window.ENV.API_BASE_URL` and calls `${API_BASE_URL}/auth|event|user/...`.
 In Kubernetes the value comes from the deployment's `API_BASE_URL` env var.
 
 ## Run locally
 
 ```bash
-# 1) Point at your gateway
-echo 'window.ENV = { API_BASE_URL: "http://localhost:30080" };' > env-config.js
+# 1) Point at your gateway (Kong proxy; committed default already says this)
+echo 'window.ENV = { API_BASE_URL: "http://localhost:8000" };' > env-config.js
 # 2) Serve the folder
 python3 -m http.server 3000
 # open http://localhost:3000/login.html
@@ -74,7 +79,7 @@ python3 -m http.server 3000
 
 ```bash
 docker build -t kaveengayanga12/eventslk-admin-portal:local .
-docker run -p 8082:80 -e API_BASE_URL=http://localhost:30080 \
+docker run -p 8082:80 -e API_BASE_URL=http://localhost:8000 \
   kaveengayanga12/eventslk-admin-portal:local
 ```
 

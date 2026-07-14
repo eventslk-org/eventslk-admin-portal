@@ -1,22 +1,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // EventsLK Admin Portal — API client
 //
-// Talks ONLY to the API Gateway (the single external entry point) using the
-// public /api/v1 prefix. The gateway rewrites:
-//   /api/v1/auth/*   -> /auth/*     /api/v1/events/* -> /event/*
-//   /api/v1/users/*  -> /user/*     /api/v1/book/*   -> /book/*
+// Talks ONLY to the Kong API gateway (the single external entry point). Kong
+// proxies the backend paths as-is (strip_path: false), so we call them directly:
+//   /auth/*   /event/*   /user/*   /book/*
 //
 // Base URL comes from window.ENV.API_BASE_URL (env-config.js, injected at runtime).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_PREFIX = '/api/v1';
-
 function resolveApiBase() {
   const root = (window.ENV && window.ENV.API_BASE_URL) ? window.ENV.API_BASE_URL : '';
-  return root.replace(/\/+$/, '') + API_PREFIX;
+  return root.replace(/\/+$/, '');
 }
 
 class ApiService {
+  // Must mirror EventController.ALLOWED_IMAGE_TYPES on the backend.
+  static ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+
   constructor() {
     this.user = JSON.parse(localStorage.getItem('admin_user') || 'null');
   }
@@ -92,27 +92,46 @@ class ApiService {
   }
 
   // ── Events ───────────────────────────────────────────────────────────────────
-  getEvents() { return this.request('/events'); }
-  addEvent(eventData) { return this.request('/events', 'POST', eventData); }
-  updateEvent(eventData) { return this.request('/events', 'PUT', eventData); }
-  deleteEvent(eventId) { return this.request(`/events/${encodeURIComponent(eventId)}`, 'DELETE'); }
+  getEvents() { return this.request('/event'); }
+  addEvent(eventData) { return this.request('/event', 'POST', eventData); }
+  updateEvent(eventData) { return this.request('/event', 'PUT', eventData); }
+  deleteEvent(eventId) { return this.request(`/event/${encodeURIComponent(eventId)}`, 'DELETE'); }
 
   // ── Event image upload (presigned S3) ────────────────────────────────────────
-  // 1) ask the gateway for a presigned PUT URL, 2) PUT the file straight to S3
+  // 1) ask the backend for a presigned PUT URL, 2) PUT the file straight to S3
   // (no Authorization header — the presigned URL carries its own signature),
   // 3) return the public imageUrl to store on the Event.
-  getUploadUrl(filename) {
-    return this.request(`/events/upload-url?filename=${encodeURIComponent(filename)}`);
+  getUploadUrl(filename, contentType) {
+    return this.request(
+      `/event/upload-url?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`);
   }
 
   async uploadEventImage(file) {
-    const presign = await this.getUploadUrl(file.name);
+    const contentType = (file.type || '').toLowerCase();
+    if (!ApiService.ALLOWED_IMAGE_TYPES.includes(contentType)) {
+      throw new Error(`Unsupported image type "${file.type || 'unknown'}". Use JPEG, PNG, WebP, AVIF or GIF.`);
+    }
+
+    const presign = await this.getUploadUrl(file.name, contentType);
     if (!presign || !presign.uploadUrl) {
       throw new Error('Failed to obtain an upload URL from the server.');
     }
+
+    // Backend mock mode (no S3 bucket configured): there is no real storage to
+    // PUT to — just use the placeholder imageUrl so local dev keeps working.
+    if (presign.uploadUrl.includes('mock-upload-endpoint')) {
+      console.warn('[upload] backend S3 is in mock mode — using placeholder image URL');
+      return presign.imageUrl;
+    }
+
+    // Content-Type and Cache-Control are pinned into the presigned signature —
+    // S3 rejects the PUT with 403 unless both headers match exactly.
     const putRes = await fetch(presign.uploadUrl, {
       method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000, immutable'
+      },
       body: file
     });
     if (!putRes.ok) {
@@ -122,8 +141,8 @@ class ApiService {
   }
 
   // ── Users ────────────────────────────────────────────────────────────────────
-  getUsers() { return this.request('/users'); }
-  deleteUser(userId) { return this.request(`/users/${encodeURIComponent(userId)}`, 'DELETE'); }
+  getUsers() { return this.request('/user'); }
+  deleteUser(userId) { return this.request(`/user/${encodeURIComponent(userId)}`, 'DELETE'); }
 }
 
 const api = new ApiService();

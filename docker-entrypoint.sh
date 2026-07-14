@@ -6,7 +6,7 @@
 # deployment) with no rebuild.
 set -e
 
-: "${API_BASE_URL:=http://localhost:30080}"
+: "${API_BASE_URL:=http://localhost:8000}"
 export API_BASE_URL
 
 TEMPLATE=/usr/share/nginx/html/env-config.template.js
