@@ -84,7 +84,7 @@ class ApiService {
   logout() {
     localStorage.removeItem('admin_user');
     this.user = null;
-    window.location.href = 'login.html';
+    window.location.href = '/login.html';
   }
 
   isAuthenticated() {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/css/style.css">
     <style>
         .stats-grid {
             display: grid;
@@ -35,9 +35,9 @@
         <aside class="sidebar">
             <div class="sidebar-logo">EventAdmin</div>
             <ul class="nav-menu">
-                <li class="nav-item"><a href="index.html" class="nav-link active">Dashboard</a></li>
-                <li class="nav-item"><a href="events.html" class="nav-link">Events</a></li>
-                <li class="nav-item"><a href="users.html" class="nav-link">Users</a></li>
+                <li class="nav-item"><a href="/index.html" class="nav-link active">Dashboard</a></li>
+                <li class="nav-item"><a href="/events.html" class="nav-link">Events</a></li>
+                <li class="nav-item"><a href="/users.html" class="nav-link">Users</a></li>
             </ul>
             <button onclick="api.logout()" class="btn btn-danger" style="width: 100%; margin-top: auto;">Logout</button>
         </aside>
@@ -71,12 +71,12 @@
         </main>
     </div>
 
-    <script src="env-config.js"></script>
-    <script src="js/api.js"></script>
+    <script src="/env-config.js"></script>
+    <script src="/js/api.js"></script>
     <script>
         // Guard script
         if (!api.isAuthenticated()) {
-            window.location.href = 'login.html';
+            window.location.href = '/login.html';
         }
 
         document.getElementById('adminName').textContent = `Welcome, ${api.user.email}`;
